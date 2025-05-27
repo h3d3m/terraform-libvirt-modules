@@ -1,4 +1,4 @@
-resource "libvirt_cloudinit_disk" "default" {
+resource "libvirt_cloudinit_disk" "this" {
   name           = var.name
   pool           = var.pool
   user_data      = var.user_data
