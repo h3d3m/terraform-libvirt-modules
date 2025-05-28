@@ -1,10 +1,10 @@
 variable "name" {
-  description = "A unique name for the resource, required by libvirt."
+  description = "A unique name for the resource"
   type        = string
 }
 
 variable "type" {
-  description = "The type of the pool."
+  description = "The type of the pool"
   type        = string
 
   validation {
