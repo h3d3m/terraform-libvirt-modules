@@ -1,4 +1,4 @@
-resource "libvirt_volume" "default" {
+resource "libvirt_volume" "this" {
   name             = var.name
   pool             = var.pool
   source           = var.src
