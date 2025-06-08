@@ -1,272 +1,326 @@
 variable "name" {
-  description = "The name of the libvirt domain (VM)."
+  description = "Name of the libvirt domain (VM)"
   type        = string
-}
-
-variable "description" {
-  description = "An optional textual description for the domain."
-  type        = string
-  default     = null
-}
-
-variable "vcpu" {
-  description = "Number of virtual CPUs to assign. Omit (null) to let libvirt default."
-  type        = number
-  default     = null
 }
 
 variable "memory" {
-  description = "Amount of memory in MiB. Omit (null) to let libvirt default."
+  description = "Memory allocation in MB for the domain"
   type        = number
+  default     = 1024
+}
+
+variable "vcpu" {
+  description = "Number of virtual CPUs to allocate"
+  type        = number
+  default     = 1
+}
+
+variable "arch" {
+  description = "CPU architecture for the domain"
+  type        = string
+  default     = "x86_64"
+  
+  validation {
+    condition = contains([
+      "x86_64", "aarch64", "armv7l", "i686", "ppc64", "ppc64le", "s390x"
+    ], var.architecture)
+    error_message = "Architecture must be a supported value."
+  }
+}
+
+variable "machine" {
+  description = "Machine type for the domain"
+  type        = string
   default     = null
 }
 
+variable "firmware" {
+  description = "Firmware type (BIOS/UEFI)"
+  type        = string
+  default     = null
+  
+  validation {
+    condition = var.firmware_type == null || contains([
+      "/usr/share/OVMF/OVMF_CODE.fd",
+      "/usr/share/edk2-ovmf/x64/OVMF_CODE.fd"
+    ], var.firmware_type)
+    error_message = "Firmware must be a valid UEFI firmware path or null for BIOS."
+  }
+}
+
+variable "autostart" {
+  description = "Automatically start the domain when libvirtd starts"
+  type        = bool
+  default     = false
+}
+
 variable "running" {
-  description = "Whether to start the domain immediately after create (true/false)."
+  description = "Whether the domain should be running"
   type        = bool
   default     = true
 }
 
-variable "cloudinit" {
-  description = <<EOF
-An optional cloudinit disk ID (for a libvirt_cloudinit_disk).  
-Set to the `id` of your cloudinit resource, or null to disable.
-EOF
-  type        = string
-  default     = null
-}
-
-variable "autostart" {
-  description = "Whether the domain should autostart with the host."
-  type        = bool
-  default     = false
-}
-
-variable "arch" {
-  description = "CPU architecture (e.g. x86_64, aarch64)."
-  type        = string
-  default     = null
-}
-
-variable "machine" {
-  description = "The QEMU machine type (e.g. pc, q35)."
-  type        = string
-  default     = null
-}
-
-variable "emulator" {
-  description = "Full path to the emulator binary."
-  type        = string
-  default     = null
-}
-
 variable "qemu_agent" {
-  description = "Whether to enable the QEMU guest agent channel."
+  description = "Enable QEMU guest agent for enhanced guest management"
   type        = bool
-  default     = false
+  default     = true
 }
 
-variable "type" {
-  description = "Domain type (e.g. hvm, qemu, kvm)."
+variable "cpu_mode" {
+  description = "CPU mode for the domain"
   type        = string
-  default     = null
-}
-
-variable "kernel" {
-  description = "The path of the kernel to boot."
-  type = string
-  default = null
-}
-
-variable "initrd" {
-  description = "The path of the initrd to boot."
-  type = string
-  default = null
-}
-
-variable "cmdline" {
-  description = "Arguments to the kernel."
-  type    = list(map(string))
-  default = []
-}
-
-variable "firmware" {
-  description = <<EOF
-The UEFI rom images for exercising UEFI secure boot in a qemu environment. 
-Users should usually specify one of the standard Open Virtual Machine Firmware (OVMF) images
-available for their distributions. The file will be opened read-only.
-EOF
-  type = string
-  default = null
-}
-
-variable "cpu" {
-  description = "CPU tuning block. Omit or set mode to null to skip."
-  type = object({
-    mode = optional(string, null)
-  })
-  default = {}
-
+  default     = "host-passthrough"
+  
   validation {
-    condition     = contains(["custom", "host-model", "host-passthrough", "maximum"], var.cpu.mode)
-    error_message = "Invalid libvirt domain cpu mode. Must be one of: custom, host-model, host-passthrough, maximum."
+    condition = var.cpu_mode == null || contains([
+      "host-passthrough", "host-model", "custom"
+    ], var.cpu_mode)
+    error_message = "CPU mode must be host-passthrough, host-model, or custom."
   }
 }
 
-variable "disk" {
-  description = "List of disk definitions. You must set exactly one of volume_id, url, file or block_device per entry."
-  type = list(map({
-    volume_id    = optional(string) # a libvirt_volume.id
-    url          = optional(string) # remote image URL
-    file         = optional(string) # local file path
-    block_device = optional(string) # host block device path
+variable "boot_devices" {
+  description = "List of boot devices in order of preference"
+  type        = list(list(string))
+  default     = [["hd"], ["network"]]
+  
+  validation {
+    condition = alltrue([
+      for device_list in var.boot_devices : alltrue([
+        for device in device_list : contains([
+          "hd", "network", "cdrom", "fd"
+        ], device)
+      ])
+    ])
+    error_message = "Boot devices must be hd, network, cdrom, or fd."
+  }
+}
+
+variable "disks" {
+  description = "List of disk configurations for the domain"
+  type = list(object({
+    volume_id    = optional(string)
+    file         = optional(string)
+    url          = optional(string)
+    block_device = optional(string)
     scsi         = optional(bool, false)
     wwn          = optional(string)
   }))
   default = []
-
+  
   validation {
     condition = alltrue([
-      for d in var.disk : length([
-        for v in [
-          d.volume_id,
-          d.url,
-          d.file,
-          d.block_device
-        ] : v
-        if v != null && v != ""
-      ]) == 1
+      for disk in var.disks : (
+        (disk.volume_id != null ? 1 : 0) +
+        (disk.file != null ? 1 : 0) +
+        (disk.url != null ? 1 : 0) +
+        (disk.block_device != null ? 1 : 0)
+      ) == 1
     ])
-    error_message = <<EOF
-Each disk entry must specify exactly one of:
-  - volume_id
-  - url
-  - file
-  - block_device
-
-You provided: ${jsonencode(var.disk)}
-EOF
+    error_message = "Each disk must specify exactly one of: volume_id, file, url, or block_device."
   }
 }
 
-variable "network_interface" {
-  description = "List of network‐interface blocks."
+variable "network_interfaces" {
+  description = "List of network interface configurations"
   type = list(object({
     network_name   = optional(string)
     network_id     = optional(string)
-    mac            = optional(string)
-    addresses      = optional(list(string))
-    hostname       = optional(string)
-    wait_for_lease = optional(bool, false)
     bridge         = optional(string)
-    vepa           = optional(bool, false)
-    macvtap        = optional(bool, false)
-    passthrough    = optional(bool, false)
-    private        = optional(bool, false)
+    vepa           = optional(string)
+    macvtap        = optional(string)
+    passthrough    = optional(string)
+    mac            = optional(string)
+    hostname       = optional(string)
+    wait_for_lease = optional(bool, true)
+    addresses      = optional(list(string), [])
   }))
   default = []
+}
 
+variable "enable_graphics" {
+  description = "Enable graphics console (VNC/Spice)"
+  type        = bool
+  default     = false
+}
+
+variable "graphics_type" {
+  description = "Graphics type (vnc or spice)"
+  type        = string
+  default     = "vnc"
+  
   validation {
-    condition = alltrue([
-      for n in var.network_interface : length([
-        for v in [
-          n.bridge,
-          n.vepa,
-          n.macvtap,
-          n.passthrough,
-          n.private
-        ] : v
-        if v != null && v != ""
-      ]) == 1
-    ])
-    error_message = <<EOF
-Each network_interface entry must specify exactly one of:
-  - bridge
-  - vepa
-  - macvtap
-  - passthrough
-  - private
-
-You provided: ${jsonencode(var.network_interface)}
-EOF
+    condition     = contains(["vnc", "spice"], var.graphics_type)
+    error_message = "Graphics type must be vnc or spice."
   }
 }
 
-variable "filesystem" {
-  description = "List of filesystem passthroughs."
+variable "graphics_listen_type" {
+  description = "Graphics listen type"
+  type        = string
+  default     = "address"
+}
+
+variable "graphics_listen_address" {
+  description = "Graphics listen address"
+  type        = string
+  default     = "0.0.0.0"
+}
+
+variable "graphics_autoport" {
+  description = "Automatically allocate graphics port"
+  type        = bool
+  default     = true
+}
+
+variable "graphics_websocket_port" {
+  description = "WebSocket port for graphics console"
+  type        = number
+  default     = null
+}
+
+variable "console_configs" {
+  description = "List of console configurations"
   type = list(object({
-    accessmode = optional(string, "passthrough") # passthrough, mapped, etc
+    type           = string
+    target_port    = string
+    target_type    = optional(string)
+    source_path    = optional(string)
+    source_host    = optional(string)
+    source_service = optional(string)
+  }))
+  default = [
+    {
+      type        = "pty"
+      target_port = "0"
+      target_type = "serial"
+    }
+  ]
+}
+
+variable "filesystems" {
+  description = "List of filesystem mount configurations"
+  type = list(object({
     source     = string
     target     = string
     readonly   = optional(bool, false)
+    accessmode = optional(string, "mapped")
   }))
   default = []
 }
 
-variable "boot_devices" {
-  description = "List of block devices to try at boot (in order)."
-  type        = list(string) # valid values: "hd", "cdrom", "network"
-  default     = []
+variable "enable_tpm" {
+  description = "Enable TPM (Trusted Platform Module) for enhanced security"
+  type        = bool
+  default     = false
 }
 
-variable "tpm" {
-  description = "Optional TPM passthrough or emulator block. Omit to disable."
-  type = object({
-    model                     = optional(string) # e.g. tpm-tis, tpm-crb
-    backend_type              = optional(string) # emulator or passthrough
-    backend_device_path       = optional(string) # when passthrough
-    backend_encryption_secret = optional(string) # when emulator+encrypted
-    backend_version           = optional(number) # numeric version
-    backend_persistent_state  = optional(bool)   # emulator state dir
-  })
-  default = {}
+variable "tpm_backend_type" {
+  description = "TPM backend type"
+  type        = string
+  default     = "emulator"
 }
 
-variable "nvram" {
-  description = "Block allows specifying the following attributes related to the nvram."
-  type = object({
-    file = optional(string, null),
-    template = optional(string, null)
-  })
-  default = {}
+variable "tpm_backend_version" {
+  description = "TPM backend version"
+  type        = string
+  default     = "2.0"
 }
 
-variable "graphics" {
-  description = "Block allows you to override the default graphics settings."
-  type = object({
-    type = optional(string, null)
-    autoport = optional(bool, null)
-    listen_type = optional(string, null)
-    listen_address = optional(string, null)
-    websocket = optional(number, null)
-  })
-  default = {}
+variable "tpm_encryption_secret" {
+  description = "TPM encryption secret"
+  type        = string
+  default     = null
+  sensitive   = true
 }
 
-variable "video" {
-  description = "Block allows you to change from libvirt default cirrus to vga or others."
-  type = string
-  default = null
+variable "tpm_persistent_state" {
+  description = "Enable TPM persistent state"
+  type        = bool
+  default     = true
 }
 
-variable "console" {
-  description = "block allows you to define a console for the domain."
-  type = object({
-    type = optional(string, null)
-    target_port = optional(string, null)
-    target_type = optional(string, null)
-    source_path = optional(string, null)
-    source_host = optional(string, null)
-    source_service = optional(string, null)
-  })
-  default = {}
+variable "tpm_device_path" {
+  description = "TPM device path"
+  type        = string
+  default     = null
+}
 
+variable "tpm_model" {
+  description = "TPM model"
+  type        = string
+  default     = "tpm-tis"
+}
+
+variable "video_type" {
+  description = "Video adapter type"
+  type        = string
+  default     = null
+  
   validation {
-    condition     = contains(["serial", "virtio"], var.console.target_type)
-    error_message = "Invalid libvirt domain console target_type. Must be one of: serial, virtio."
+    condition = var.video_type == null || contains([
+      "vga", "cirrus", "vmvga", "xen", "vbox", "qxl", "virtio"
+    ], var.video_type)
+    error_message = "Video type must be a supported adapter."
   }
-  validation {
-    condition     = contains(["pty", "tcp"], var.console.type)
-    error_message = "Invalid libvirt domain console type. Must be one of: pty, tcp."
-  }
+}
+
+variable "nvram_template" {
+  description = "NVRAM template for UEFI"
+  type        = string
+  default     = null
+}
+
+variable "nvram_file" {
+  description = "NVRAM file path"
+  type        = string
+  default     = null
+}
+
+variable "cloudinit_id" {
+  description = "Cloud-init disk ID"
+  type        = string
+  default     = null
+}
+
+variable "coreos_ignition_id" {
+  description = "CoreOS Ignition configuration ID"
+  type        = string
+  default     = null
+}
+
+variable "xml_override" {
+  description = "XSLT stylesheet for XML domain configuration override"
+  type        = string
+  default     = null
+}
+
+variable "create_before_destroy" {
+  description = "Create replacement domain before destroying the original"
+  type        = bool
+  default     = true
+}
+
+variable "prevent_destroy" {
+  description = "Prevent accidental destruction of the domain"
+  type        = bool
+  default     = false
+}
+
+variable "create_timeout" {
+  description = "Timeout for domain creation"
+  type        = string
+  default     = "10m"
+}
+
+variable "metadata" {
+  description = "Custom metadata for the domain"
+  type        = string
+  default     = null
+}
+
+variable "description" {
+  description = "Human-readable description of the domain"
+  type        = string
+  default     = "Terraform-managed libvirt domain"
 }

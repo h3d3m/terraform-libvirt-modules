@@ -1,108 +1,139 @@
-resource "libvirt_domain" "default" {
-  name        = var.name
-  description = var.description # Optional
-  vcpu        = var.vcpu        # Optional
-  memory      = var.memory      # Optional
-  running     = var.running     # Optional
-  cloudinit   = var.cloudinit   # Optional
-  autostart   = var.autostart   # Optional
-  arch        = var.arch        # Optional
-  machine     = var.machine     # Optional
-  emulator    = var.emulator    # Optional
-  qemu_agent  = var.qemu_agent  # Optional
-  type        = var.type        # Optional
-  kernel      = var.kernel      # Optional
-  initrd      = var.initrd      # Optional
-  cmdline     = var.cmdline     # Optional
-  firmware    = var.firmware    # Optional
-
-  cpu {                 # Optional
-    mode = var.cpu.mode # Optional
-  }
-
-  dynamic "disk" { # Optional
-    for_each = var.disk
+resource "libvirt_domain" "this" {
+  name       = var.name
+  memory     = var.memory
+  vcpu       = var.vcpu  
+  arch       = var.arch
+  machine    = var.machine
+  firmware   = var.firmware
+  autostart  = var.autostart
+  running    = var.running
+  qemuagent  = var.qemu_agent
+  
+  dynamic "boot_device" {
+    for_each = var.boot_devices
     content {
-      # One of volume_id, url, file, block_device
-      volume_id    = disk.value.volume_id    # Optional
-      url          = disk.value.url          # Optional
-      file         = disk.value.file         # Optional
-      block_device = disk.value.block_device # Optional
-      scsi         = disk.value.scsi         # Optional
-      wwn          = disk.value.wwn          # Optional
+      dev = bootdevice.value
     }
   }
-
-  dynamic "network_interface" { # Optional
-    for_each = var.network_interface
+  
+  dynamic "cpu" {
+    for_each = var.cpu_mode != null ? [1] : []
     content {
-      network_name   = network_interface.value.network_name   # Optional
-      network_id     = network_interface.value.network_id     # Optional
-      mac            = network_interface.value.mac            # Optional
-      addresses      = network_interface.value.addresses      # Optional
-      hostname       = network_interface.value.hostname       # Optional
-      wait_for_lease = network_interface.value.wait_for_lease # Optional
-      bridge         = network_interface.value.bridge         # Optional
-      vepa           = network_interface.value.vepa           # Optional
-      macvtap        = network_interface.value.macvtap        # Optional
-      passthrough    = network_interface.value.passthrough    # Optional
-      private        = network_interface.value.private        # Optional
+      mode = var.cpu_mode
     }
   }
-
-  dynamic "filesystem" { # Optional
-    for_each = var.filesystem
+  
+  dynamic "disk" {
+    for_each = var.disks
     content {
-      accessmode = filesystem.value.accessmode # Optional
-      source     = filesystem.value.source
-      target     = filesystem.value.target
-      readonly   = filesystem.value.readonly # Optional
+      volume_id    = lookup(disk.value, "volume_id", null)
+      file         = lookup(disk.value, "file", null)
+      url          = lookup(disk.value, "url", null)
+      block_device = lookup(disk.value, "block_device", null)
+      scsi         = lookup(disk.value, "scsi", false)
+      wwn          = lookup(disk.value, "wwn", null)
     }
   }
-
-  boot_device {
-    dev = var.block_device.dev # Optional
+  
+  dynamic "network_interface" {
+    for_each = var.network_interfaces
+    content {
+      network_name   = lookup(network_interface.value, "network_name", null)
+      network_id     = lookup(network_interface.value, "network_id", null)
+      bridge         = lookup(network_interface.value, "bridge", null)
+      vepa           = lookup(network_interface.value, "vepa", null)
+      macvtap        = lookup(network_interface.value, "macvtap", null)
+      passthrough    = lookup(network_interface.value, "passthrough", null)
+      mac            = lookup(network_interface.value, "mac", null)
+      hostname       = lookup(network_interface.value, "hostname", null)
+      wait_for_lease = lookup(network_interface.value, "wait_for_lease", true)
+      addresses      = lookup(network_interface.value, "addresses", [])
+    }
   }
-
-  tpm {
-    model                     = var.tpm.model                     # Optional
-    backend_type              = var.tpm.backend_type              # Optional
-    # Additional attributes when backend_type is "passthrough"
-    backend_device_path       = var.tpm.backend_device_path       # Optional
-    # Additional attributes when backend_type is "emulator"
-    backend_encryption_secret = var.tpm.backend_encryption_secret # Optional
-    backend_version           = var.tpm.backend_version           # Optional
-    backend_persistent_state  = var.tpm.backend_persistent_state  # Optional
+  
+  dynamic "graphics" {
+    for_each = var.enable_graphics ? [1] : []
+    content {
+      type          = var.graphics_type
+      listen_type   = var.graphics_listen_type
+      listen_address = var.graphics_listen_address
+      autoport      = var.graphics_autoport
+      websocket     = var.graphics_websocket_port
+    }
   }
-
-  nvram {
-    file     = var.nvram.file     # Optional
-    template = var.nvram.template # Optional
-  }
-
-  graphics {
-    type           = var.graphics.type           # Optional
-    autoport       = var.graphics.autoport       # Optional
-    listen_type    = var.graphics.listen_type    # Optional
-    listen_address = var.graphics.listen_address # Optional
-    websocket      = var.graphics.websocket      # Optional
-  }
-
-  video {
-    type = var.video.type # Optional
-  }
-
+  
   dynamic "console" {
-    for_each = var.console
+    for_each = var.console_configs
     content {
       type           = console.value.type
       target_port    = console.value.target_port
-      target_type    = console.value.target_type    # Optional ("serial" or "virtio")
-      # Additional attributes when type is "pty"
-      source_path    = console.value.source_path    # Optional
-      # Additional attributes when type is "tcp"
-      source_host    = console.value.source_host    # Optional
-      source_service = console.value.source_service # Optional
+      target_type    = lookup(console.value, "target_type", null)
+      source_path    = lookup(console.value, "source_path", null)
+      source_host    = lookup(console.value, "source_host", null)
+      source_service = lookup(console.value, "source_service", null)
     }
+  }
+  
+  dynamic "filesystem" {
+    for_each = var.filesystems
+    content {
+      source      = filesystem.value.source
+      target      = filesystem.value.target
+      readonly    = lookup(filesystem.value, "readonly", false)
+      accessmode  = lookup(filesystem.value, "accessmode", "mapped")
+    }
+  }
+  
+  dynamic "tpm" {
+    for_each = var.enable_tpm ? [1] : []
+    content {
+      backend_type             = var.tpm_backend_type
+      backend_version          = var.tpm_backend_version
+      backend_encryption_secret = var.tpm_encryption_secret
+      backend_persistent_state = var.tpm_persistent_state
+      backend_device_path      = var.tpm_device_path
+      model                   = var.tpm_model
+    }
+  }
+  
+  dynamic "video" {
+    for_each = var.video_type != null ? [1] : []
+    content {
+      type = var.video_type
+    }
+  }
+  
+  dynamic "nvram" {
+    for_each = var.nvram_template != null ? [1] : []
+    content {
+      file     = var.nvram_file
+      template = var.nvram_template
+    }
+  }
+  
+  cloudinit = var.cloudinit_id
+  
+  coreos_ignition = var.coreos_ignition_id
+  
+  dynamic "xml" {
+    for_each = var.xml_override != null ? [1] : []
+    content {
+      xslt = var.xml_override
+    }
+  }
+  
+  lifecycle {
+    create_before_destroy = var.create_before_destroy
+    prevent_destroy       = var.prevent_destroy
+    ignore_changes = [
+      id,
+      arch,
+      emulator,
+      machine,
+    ]
+  }
+  
+  timeouts {
+    create = var.create_timeout
   }
 }
