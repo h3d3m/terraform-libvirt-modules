@@ -1,104 +1,102 @@
 variable "name" {
-  description = "Name of the libvirt network"
   type        = string
+  description = "(Required) Name of the network"
 }
 
 variable "mode" {
-  description = "Network mode (e.g. nat, none, route, open, bridge)"
   type        = string
+  description = "(Optional) Network mode (nat, route, bridge)"
   default     = "nat"
-
-  validation {
-    condition     = contains(["nat", "none", "route", "open", "bridge"], var.mode)
-    error_message = "Invalid libvirt network mode. Must be one of: nat, none, route, open, bridge."
-  }
 }
 
 variable "domain" {
-  description = "DNS domain for this network"
   type        = string
+  description = "(Optional) DNS domain name"
   default     = null
 }
 
 variable "addresses" {
-  description = "List of CIDR subnets for this network"
   type        = list(string)
-  default = []
-}
-
-variable "bridge" {
-  description = "Custom bridge name (omit for auto-generated)"
-  type        = string
+  description = "(Optional) List of IP addresses in CIDR format"
   default     = null
-
-  validation {
-    condition = var.mode != "bridge" || (var.bridge != null && length(var.bridge) > 0)
-    error_message = "The bridge name must be set with mode = \"bridge\""
-  }
-}
-
-variable "mtu" {
-  description = "MTU for the bridge (optional)"
-  type        = number
-  default     = null
-
-  validation {
-    condition     = var.mode != "bridge" || var.mtu == null
-    error_message = "MTU value must be omitted with mode = \"bridge\""
-  }
 }
 
 variable "autostart" {
-  description = "Whether the network starts automatically"
   type        = bool
-  default     = false
+  description = "(Optional) Auto-start network on host boot"
+  default     = null
 }
 
-variable "dns" {
-  description = "DNS settings (omit by leaving enabled=false)"
-  type = object({
-    enabled     = optional(bool, false)
-    local_only  = optional(bool, false)
-    forwarders  = optional(list(object({
-      address = optional(string),
-      domain = optional(string)
-    })), [])
-    hosts       = optional(list(object({
-      hostname = string,
-      ip = string
-    })), [])
-    srvs        = optional(list(object({
-      service = string,
-      protocol = string
-    })), [])
-  })
-  default = {}
+variable "bridge" {
+  type        = string
+  description = "(Optional) Bridge device name"
+  default     = null
+}
+
+variable "mtu" {
+  type        = number
+  description = "(Optional) MTU size"
+  default     = null
 }
 
 variable "dhcp" {
-  description = "DNS settings"
-  type        = object({
-    enabled = optional(bool, false)
+  type = object({
+    enabled = bool
   })
-  default     = {}
+  description = "(Optional) DHCP configuration block"
+  default     = null
+}
+
+variable "dns" {
+  type = object({
+    enabled    = bool
+    local_only = bool
+    forwarders = list(object({
+      address = string
+      domain  = string
+    }))
+    hosts = set(object({
+      hostname = string
+      ip       = string
+    }))
+    srvs = list(object({
+      domain   = string
+      port     = string
+      priority = string
+      protocol = string
+      service  = string
+      target   = string
+      weight   = string
+    }))
+  })
+  description = "(Optional) DNS configuration block"
+  default     = null
+}
+
+variable "dnsmasq_options" {
+  type = object({
+    options = list(object({
+      option_name  = string
+      option_value = string
+    }))
+  })
+  description = "(Optional) DNSmasq options configuration"
+  default     = null
 }
 
 variable "routes" {
-  description = "Static routes (cidr & gateway) to add"
   type = list(object({
     cidr    = string
     gateway = string
   }))
-  default = []
+  description = "(Optional) Static route definitions"
+  default     = null
 }
 
-variable "dnsmasq_options" {
-  description = "Custom dnsmasq options via nested blocks"
+variable "xml" {
   type = object({
-    options = optional(list(object({
-      option_name  = string
-      option_value = optional(string)
-    })), [])
+    xslt = string
   })
-  default = {}
+  description = "(Optional) XML XSLT transformation"
+  default     = null
 }

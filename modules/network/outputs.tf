@@ -1,19 +1,15 @@
-output "network_id" {
-  description = "The libvirt network ID for referencing in libvirt_domain.network_interface"
-  value       = libvirt_network.default.id
+# modules/libvirt-network/outputs.tf
+output "id" {
+  description = "Network ID"
+  value       = libvirt_network.this.id
 }
 
-output "network_name" {
-  description = "The libvirt network name for referencing in libvirt_domain.network_interface"
-  value       = libvirt_network.default.name
+output "bridge" {
+  description = "Bridge interface name"
+  value       = libvirt_network.this.bridge
 }
 
-output "network_bridge" {
-  description = "Bridge device name created by libvirt"
-  value       = libvirt_network.default.bridge
-}
-
-output "network_addresses" {
-  description = "CIDR subnets assigned to the network"
-  value       = libvirt_network.default.addresses
+output "addresses" {
+  description = "IP address ranges"
+  value       = libvirt_network.this.addresses
 }
