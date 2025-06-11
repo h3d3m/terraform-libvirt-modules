@@ -12,9 +12,9 @@ resource "libvirt_domain" "this" {
   coreos_ignition = var.coreos_ignition
   
   dynamic "boot_device" {
-    for_each = var.boot_devices
+    for_each = var.boot_device
     content {
-      dev = bootdevice.value
+      dev = boot_device.value
     }
   }
   

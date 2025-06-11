@@ -71,7 +71,7 @@ variable "cpu_mode" {
   }
 }
 
-variable "boot_devices" {
+variable "boot_device" {
   description = "List of boot devices in order of preference"
   type        = list(list(string))
   default     = [["hd"], ["network"]]
