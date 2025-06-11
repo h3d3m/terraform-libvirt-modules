@@ -78,7 +78,7 @@ variable "boot_device" {
   
   validation {
     condition = alltrue([
-      for device_list in var.boot_devices : alltrue([
+      for device_list in var.boot_device : alltrue([
         for device in device_list : contains([
           "hd", "network", "cdrom", "fd"
         ], device)
