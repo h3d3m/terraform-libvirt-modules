@@ -75,17 +75,6 @@ variable "boot_device" {
   description = "List of boot devices in order of preference"
   type        = list(string)
   default     = ["hd", "network"]
-  
-  validation {
-    condition = alltrue([
-      for device_list in var.boot_device : alltrue([
-        for device in device_list : contains([
-          "hd", "network", "cdrom", "fd"
-        ], device)
-      ])
-    ])
-    error_message = "Boot devices must be hd, network, cdrom, or fd."
-  }
 }
 
 variable "disks" {
