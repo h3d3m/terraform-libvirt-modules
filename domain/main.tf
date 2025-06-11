@@ -7,7 +7,7 @@ resource "libvirt_domain" "this" {
   firmware        = var.firmware
   autostart       = var.autostart
   running         = var.running
-  qemuagent       = var.qemu_agent
+  qemu_agent      = var.qemu_agent
   cloudinit       = var.cloudinit
   coreos_ignition = var.coreos_ignition
   
