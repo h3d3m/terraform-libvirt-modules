@@ -23,7 +23,7 @@ variable "arch" {
   validation {
     condition = contains([
       "x86_64", "aarch64", "armv7l", "i686", "ppc64", "ppc64le", "s390x"
-    ], var.architecture)
+    ], var.arch)
     error_message = "Architecture must be a supported value."
   }
 }
@@ -43,7 +43,7 @@ variable "firmware" {
     condition = var.firmware_type == null || contains([
       "/usr/share/OVMF/OVMF_CODE.fd",
       "/usr/share/edk2-ovmf/x64/OVMF_CODE.fd"
-    ], var.firmware_type)
+    ], var.firmware)
     error_message = "Firmware must be a valid UEFI firmware path or null for BIOS."
   }
 }
