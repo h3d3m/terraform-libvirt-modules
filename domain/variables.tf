@@ -40,7 +40,7 @@ variable "firmware" {
   default     = null
   
   validation {
-    condition = var.firmware_type == null || contains([
+    condition = var.firmware == null || contains([
       "/usr/share/OVMF/OVMF_CODE.fd",
       "/usr/share/edk2-ovmf/x64/OVMF_CODE.fd"
     ], var.firmware)
