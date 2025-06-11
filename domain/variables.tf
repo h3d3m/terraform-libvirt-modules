@@ -275,7 +275,7 @@ variable "cloudinit" {
   default     = null
 }
 
-variable "coreos_ignition_id" {
+variable "coreos_ignition" {
   description = "CoreOS Ignition configuration ID"
   type        = string
   default     = null
