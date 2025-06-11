@@ -88,6 +88,6 @@ output "machine" {
 
 output "xml" {
   description = "Complete XML configuration of the domain (for debugging)"
-  value       = data.libvirt_domain.this.xml
+  value       = libvirt_domain.this.xml
   sensitive   = false
 }
