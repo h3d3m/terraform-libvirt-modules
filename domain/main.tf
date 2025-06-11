@@ -122,17 +122,6 @@ resource "libvirt_domain" "this" {
     }
   }
   
-  lifecycle {
-    create_before_destroy = var.create_before_destroy
-    prevent_destroy       = var.prevent_destroy
-    ignore_changes = [
-      id,
-      arch,
-      emulator,
-      machine,
-    ]
-  }
-  
   timeouts {
     create = var.create_timeout
   }

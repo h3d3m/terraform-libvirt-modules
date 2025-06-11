@@ -295,18 +295,6 @@ variable "xml_override" {
   default     = null
 }
 
-variable "create_before_destroy" {
-  description = "Create replacement domain before destroying the original"
-  type        = bool
-  default     = true
-}
-
-variable "prevent_destroy" {
-  description = "Prevent accidental destruction of the domain"
-  type        = bool
-  default     = false
-}
-
 variable "create_timeout" {
   description = "Timeout for domain creation"
   type        = string
