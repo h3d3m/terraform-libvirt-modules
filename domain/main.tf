@@ -14,7 +14,7 @@ resource "libvirt_domain" "this" {
   dynamic "boot_device" {
     for_each = var.boot_device
     content {
-      dev = boot_device.value
+      dev = [boot_device.value]
     }
   }
   
