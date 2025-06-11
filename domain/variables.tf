@@ -179,7 +179,7 @@ variable "graphics_websocket_port" {
   default     = null
 }
 
-variable "console_configs" {
+variable "console" {
   description = "List of console configurations"
   type = list(object({
     type           = string

@@ -65,7 +65,7 @@ resource "libvirt_domain" "this" {
   }
   
   dynamic "console" {
-    for_each = var.console_configs
+    for_each = var.console
     content {
       type           = console.value.type
       target_port    = console.value.target_port
