@@ -1,13 +1,15 @@
 resource "libvirt_domain" "this" {
-  name       = var.name
-  memory     = var.memory
-  vcpu       = var.vcpu  
-  arch       = var.arch
-  machine    = var.machine
-  firmware   = var.firmware
-  autostart  = var.autostart
-  running    = var.running
-  qemuagent  = var.qemu_agent
+  name            = var.name
+  memory          = var.memory
+  vcpu            = var.vcpu  
+  arch            = var.arch
+  machine         = var.machine
+  firmware        = var.firmware
+  autostart       = var.autostart
+  running         = var.running
+  qemuagent       = var.qemu_agent
+  cloudinit       = var.cloudinit
+  coreos_ignition = var.coreos_ignition
   
   dynamic "boot_device" {
     for_each = var.boot_devices
@@ -110,10 +112,6 @@ resource "libvirt_domain" "this" {
       template = var.nvram_template
     }
   }
-  
-  cloudinit = var.cloudinit_id
-  
-  coreos_ignition = var.coreos_ignition_id
   
   dynamic "xml" {
     for_each = var.xml_override != null ? [1] : []

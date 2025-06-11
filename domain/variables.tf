@@ -277,8 +277,8 @@ variable "nvram_file" {
   default     = null
 }
 
-variable "cloudinit_id" {
-  description = "Cloud-init disk ID"
+variable "cloudinit" {
+  description = "Cloud-init disk"
   type        = string
   default     = null
 }
